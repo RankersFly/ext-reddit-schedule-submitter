@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reddit Schedule Submitter</title>
+  <link rel="icon" href="icons/icon32.png">
+  <style>
+    :root {
+      --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f8f9fa; --text: #16181b; --muted: #687078;
+      --border: #e3e6ea; --accent: #4f46e5; --accent-hover: #4338ca; --accent-soft: #eef2ff;
+      --ok: #16a34a; --ok-soft: #e8f7ee; --bad: #dc2626; --bad-soft: #fdecec;
+      --warn: #b45309; --warn-soft: #fff4e0; --info: #2563eb; --info-soft: #e9f0fe;
+      --neutral-soft: #eef0f2; --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+      --radius: 14px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b0d0f; --surface: #15181b; --surface-2: #1b1f23; --text: #e6e8ea; --muted: #8b939b;
+        --border: #262b30; --accent: #6366f1; --accent-hover: #4f46e5; --accent-soft: #1e1b4b; --ok: #4ade80; --ok-soft: #12291b; --bad: #f87171;
+        --bad-soft: #2f1414; --warn: #fbbf24; --warn-soft: #2e2410; --info: #60a5fa; --info-soft: #132238;
+        --neutral-soft: #22272c; --shadow: none;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--neutral-soft); padding: 1px 5px; border-radius: 4px; }
+
+    /* header */
+    header { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; }
+    .header-inner { max-width: 1240px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+    .logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; flex-shrink: 0; }
+    .logo svg { width: 20px; height: 20px; color: #fff; }
+    .brand h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+    .brand p { margin: 0; font-size: 12px; color: var(--muted); }
+    .run-state { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: var(--neutral-soft); color: var(--muted); }
+    .run-state .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    body.running .run-state { background: var(--ok-soft); color: var(--ok); }
+    body.running .run-state .dot { animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .3; } }
+
+    /* layout */
+    main { max-width: 1240px; margin: 0 auto; padding: 24px 20px 48px; display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px 0; }
+    .card-head h2 { margin: 0; font-size: 14px; font-weight: 700; }
+    .card-body { padding: 16px 18px 18px; }
+    aside { display: flex; flex-direction: column; gap: 20px; position: sticky; top: 88px; }
+    @media (max-width: 900px) { aside { position: static; } }
+    .stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+    /* form */
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .field > span { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .prefix { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+    .prefix:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .prefix b { padding: 0 0 0 12px; color: var(--muted); font-weight: 600; }
+    .prefix input, .prefix select { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: inherit; padding: 9px 12px 9px 4px; outline: none; }
+    .prefix .suffix { padding: 0 12px; color: var(--muted); font-size: 12px; }
+
+    .drop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 20px 12px; border: 1.5px dashed var(--border); border-radius: 12px; background: var(--surface-2); cursor: pointer; transition: border-color .15s, background .15s; }
+    .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+    .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .drop svg { width: 26px; height: 26px; color: var(--accent); }
+    .drop strong { font-size: 13px; }
+    .drop small { color: var(--muted); font-size: 12px; }
+    .drop.has-file strong { color: var(--ok); }
+
+    .toggle { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 12px; background: var(--warn-soft); cursor: pointer; margin-bottom: 18px; }
+    .toggle input { appearance: none; flex-shrink: 0; width: 36px; height: 20px; border-radius: 999px; background: var(--border); position: relative; cursor: pointer; transition: background .2s; margin: 1px 0 0; }
+    .toggle input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+    .toggle input:checked { background: var(--warn); }
+    .toggle input:checked::after { transform: translateX(16px); }
+    .toggle b { display: block; font-size: 13px; }
+    .toggle small { color: var(--muted); font-size: 12px; }
+    .toggle:has(input:not(:checked)) { background: var(--neutral-soft); }
+
+    /* buttons */
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; transition: background .15s, border-color .15s, opacity .15s; }
+    button:hover:not(:disabled) { background: var(--surface-2); }
+    button svg { width: 15px; height: 15px; }
+    button.primary { grid-column: 1 / -1; background: var(--accent); border-color: var(--accent); color: #fff; padding: 11px 14px; font-size: 14px; }
+    button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+    button.danger { color: var(--bad); }
+    button.ghost { border-color: transparent; color: var(--muted); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+
+    .note { display: flex; gap: 8px; margin: 14px 0 0; color: var(--muted); font-size: 12px; }
+    .note svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+
+    /* stats */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    @media (max-width: 600px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+    .stat { padding: 14px 16px; }
+    .stat span { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+    .stat strong { display: block; font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; margin-top: 2px; }
+    .stat.ok strong { color: var(--ok); }
+    .stat.bad strong { color: var(--bad); }
+    .progress { height: 6px; background: var(--neutral-soft); border-radius: 999px; overflow: hidden; margin-top: 4px; }
+    .progress div { height: 100%; width: 0; background: var(--ok); border-radius: inherit; transition: width .4s ease; }
+    .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+    /* table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--surface-2); white-space: nowrap; }
+    th:first-child { border-top-left-radius: 10px; } th:last-child { border-top-right-radius: 10px; }
+    td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    tbody tr:hover td { background: var(--surface-2); }
+    tr.is-running td { background: var(--info-soft) !important; }
+    td.num { color: var(--muted); font-variant-numeric: tabular-nums; width: 36px; }
+    td.post { min-width: 220px; max-width: 420px; }
+    td.post b { display: block; font-weight: 600; }
+    td.post small { display: block; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
+    td.when { white-space: nowrap; }
+    td.when small { display: block; color: var(--muted); }
+    td.status { min-width: 140px; }
+    td.status small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; max-width: 260px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; text-transform: capitalize; background: var(--neutral-soft); color: var(--muted); }
+    .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .pill.done { background: var(--ok-soft); color: var(--ok); }
+    .pill.failed, .pill.invalid { background: var(--bad-soft); color: var(--bad); }
+    .pill.filled, .pill.unconfirmed { background: var(--warn-soft); color: var(--warn); }
+    .pill.running { background: var(--info-soft); color: var(--info); }
+    .pill.running::before { animation: pulse 1s infinite; }
+    .empty { text-align: center; padding: 48px 16px !important; color: var(--muted); }
+    .empty svg { width: 36px; height: 36px; opacity: .5; margin-bottom: 8px; }
+
+    /* log */
+    #log, #inspectOut { margin: 0; min-height: 120px; max-height: 320px; overflow: auto; padding: 12px 14px; border-radius: 10px; background: #0f1215; color: #c9d1d9; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+    #log:empty::before { content: "Nothing yet. Load a CSV and press Start."; color: #6b7480; }
+
+    /* confirm dialog */
+    dialog { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 0; width: min(440px, calc(100vw - 32px)); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+    dialog::backdrop { background: rgba(10,12,16,.5); backdrop-filter: blur(2px); }
+    .dlg-body { padding: 22px 22px 8px; display: flex; gap: 14px; }
+    .dlg-icon { width: 40px; height: 40px; border-radius: 50%; background: var(--warn-soft); color: var(--warn); display: grid; place-items: center; flex-shrink: 0; }
+    .dlg-icon svg { width: 20px; height: 20px; }
+    .dlg-body h3 { margin: 0 0 6px; font-size: 16px; }
+    .dlg-body p { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+    .dlg-body ul { margin: 0 0 10px; padding-left: 18px; color: var(--muted); font-size: 13px; }
+    .dlg-body li { margin-bottom: 4px; }
+    .dlg-body li b { color: var(--text); }
+    .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 22px 20px; }
+    button.warn { background: var(--bad); border-color: var(--bad); color: #fff; }
+    button.warn:hover:not(:disabled) { background: var(--bad); opacity: .9; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+    <div class="brand">
+      <h1>Reddit Schedule Submitter</h1>
+      <p>Bulk-schedule posts from a CSV using Reddit's own scheduler</p>
+    </div>
+    <div class="run-state"><span class="dot"></span><span id="runState">Idle</span></div>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <section class="card">
+      <div class="card-head"><h2>Setup</h2></div>
+      <div class="card-body">
+        <label class="field">
+          <span>Subreddit</span>
+          <div class="prefix"><b>r/</b><input type="text" id="sub" placeholder="reddmentor_dev" autocomplete="off"></div>
+        </label>
+
+        <div class="field">
+          <span>CSV file</span>
+          <label class="drop" id="drop">
+            <input type="file" id="csv" accept=".csv,text/csv">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>
+            <strong id="fileName">Drop CSV here or click to browse</strong>
+            <small>Columns: <code>title</code> <code>body</code> <code>date</code> <code>time</code></small>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Delay between posts</span>
+          <div class="prefix"><input type="number" id="delay" min="5" value="30" style="padding-left:12px"><span class="suffix">seconds</span></div>
+        </label>
+
+        <label class="toggle">
+          <input type="checkbox" id="testMode" checked>
+          <div><b>Test mode</b><small>Fills and sets the schedule for one row, but doesn't submit.</small></div>
+        </label>
+
+        <div class="actions">
+          <button class="primary" id="start" disabled>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>
+            Start
+          </button>
+          <button class="danger" id="stop" disabled>
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            Stop
+          </button>
+          <button id="reset">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset
+          </button>
+          <button class="ghost" id="inspect" style="grid-column:1/-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            Inspect submit page
+          </button>
+        </div>
+
+        <p class="note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>
+          Times use your computer's time zone. Done rows are skipped on the next Start. Keep this tab visible while it runs.
+        </p>
+      </div>
+    </section>
+  </aside>
+
+  <div class="stack">
+    <section class="stats">
+      <div class="card stat"><span>Total</span><strong id="statTotal">0</strong></div>
+      <div class="card stat ok"><span>Scheduled</span><strong id="statDone">0</strong></div>
+      <div class="card stat"><span>Remaining</span><strong id="statPending">0</strong></div>
+      <div class="card stat bad"><span>Failed / invalid</span><strong id="statFailed">0</strong></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Queue</h2>
+      </div>
+      <div class="card-body">
+        <div class="progress"><div id="progressBar"></div></div>
+        <div class="progress-label"><span id="progressText">0 of 0 scheduled</span><span id="progressPct">0%</span></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Post</th><th>Scheduled for</th><th>Status</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Activity log</h2><button class="ghost" id="clearLog">Clear</button></div>
+      <div class="card-body"><div id="log"></div></div>
+    </section>
+
+    <section class="card" id="inspectCard" hidden>
+      <div class="card-head"><h2>Inspect output</h2></div>
+      <div class="card-body">
+        <p class="note" style="margin:0 0 10px">If scheduling breaks after a Reddit update, share this output so the selectors can be adjusted.</p>
+        <div id="inspectOut"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<dialog id="resetDialog">
+  <form method="dialog">
+    <div class="dlg-body">
+      <div class="dlg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+      <div>
+        <h3>Reset all statuses?</h3>
+        <p>This clears the progress the extension has saved for every row.</p>
+        <ul>
+          <li id="resetDoneLine">Rows marked <b>done</b> will be treated as <b>pending</b> again. Pressing Start will schedule them <b>a second time</b>, creating duplicate posts on Reddit.</li>
+          <li>Posts already scheduled on Reddit are <b>not</b> cancelled or deleted. Manage those from Reddit's scheduled posts page.</li>
+          <li>Your CSV and settings stay as they are.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button value="cancel" autofocus>Cancel</button>
+      <button value="confirm" class="warn">Reset statuses</button>
+    </div>
+  </form>
+</dialog>
+<script src="dashboard.js"></script>
+</body>
+</html>

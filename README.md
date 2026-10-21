@@ -1,0 +1,131 @@
+# Reddit Schedule Submitter
+
+A Chrome extension (Manifest V3) that bulk-schedules Reddit posts from a CSV file.
+It fills Reddit's own post composer and uses Reddit's built-in **Schedule Post** feature,
+one row at a time. There's no API key and no third-party server: it runs in your browser
+with your normal Reddit login.
+
+Built for subreddits where scheduled posting is available. Typically that means
+communities you moderate.
+
+## Features
+
+- Load a CSV of posts (`title`, `body`, `date`, `time`) by file picker or drag-and-drop
+- Fills the title and rich-text body, opens the schedule picker, sets the date and time, and clicks **Schedule**
+- Configurable delay between posts
+- **Test mode** (on by default): fills one row and sets the schedule, but never submits
+- Confirms each post was accepted before moving on; stops on the first failure so nothing gets posted twice
+- Saves per-row status, so you can stop and resume and rows already done are skipped
+- Dashboard with progress, coloured status labels, an activity log and a light/dark theme
+- **Inspect** tool that dumps the submit page's structure, for fixing selectors after Reddit changes its UI
+
+## Install
+
+1. Open `chrome://extensions`
+2. Turn on **Developer mode** (top right)
+3. Click **Load unpacked** and select this folder
+4. Pin the extension and click its icon to open the dashboard
+
+After editing any file, click the reload icon on the extension card and refresh the dashboard tab.
+
+## CSV format
+
+| Column      | Required | Format                                       |
+|-------------|----------|----------------------------------------------|
+| `title`     | yes      | Up to 300 characters                         |
+| `body`      | no       | Plain text; blank lines become paragraphs    |
+| `date`      | yes      | `YYYY-MM-DD` or `MM/DD/YYYY`                 |
+| `time`      | yes      | `HH:mm` (24h) or `h:mm AM/PM`                |
+| `subreddit` | no       | Overrides the dashboard's subreddit per row  |
+
+Times are interpreted in **your computer's local time zone**, which is the same zone
+Reddit's schedule dialog shows.
+
+Wrap a field in double quotes if it contains commas or line breaks. Write a literal
+quote as `""`.
+
+```csv
+title,body,date,time
+"Welcome to the sub!","First paragraph.
+
+Second paragraph, with a comma.",2026-10-25,09:30
+Weekly thread #1,Drop your questions below.,10/26/2026,2:00 PM
+```
+
+Two sample files are included: `sample.csv` (2 rows) and `sample-20.csv` (20 rows).
+
+## Usage
+
+1. Enter the subreddit (without `r/`) and load your CSV
+2. Check the queue: rows with problems (bad date, past time, empty title) are marked **invalid** and skipped
+3. With **Test mode** on, press **Start**. Check the Reddit window: the title, body and schedule should be filled in
+4. Turn Test mode off and press **Start** to schedule everything
+
+Keep the dashboard tab visible while it runs, because Chrome slows down timers in hidden tabs.
+
+## Row statuses
+
+| Status        | Meaning                                                                |
+|---------------|------------------------------------------------------------------------|
+| `pending`     | Not attempted yet                                                      |
+| `invalid`     | Row data is bad; skipped                                               |
+| `running`     | Being filled right now                                                 |
+| `filled`      | Test mode: filled and scheduled in the form, not submitted             |
+| `done`        | Reddit accepted the scheduled post                                     |
+| `failed`      | An error at some step; the reason is shown                             |
+| `unconfirmed` | Clicked Schedule, but no success signal within 40s: check Reddit       |
+
+Statuses are stored in `chrome.storage.local`, keyed by a hash of subreddit, title, date
+and time. A row counts as **done** when, after Schedule is clicked, the page leaves
+`/submit` or the form is cleared, with no error shown in Reddit's error list under the
+submit button. Any `failed` or `unconfirmed` row stops the run.
+
+**Reset** clears all statuses after a confirmation. Rows that were done will be
+scheduled again on the next Start, and nothing on Reddit is cancelled.
+
+## How it works
+
+```
+dashboard.html / dashboard.js   UI, CSV parsing, queue runner, status storage
+        │  opens a Reddit window, injects content.js per row
+        ▼
+content.js                      runs on reddit.com/r/<sub>/submit
+   1. title  → post-composer-title (shadow DOM textarea)
+   2. body   → shreddit-composer Lexical editor (simulated paste)
+   3. clock  → #date-picker-button > shadow > button
+   4. modal  → shreddit-date-input[name=publish-at-date]   (YYYY-MM-DD)
+              shreddit-time-input[name=publish-at-time]    (HH:mm)
+              button[data-testid=save-button]
+   5. submit → #submit-post-button, only if its label says "Schedule"
+background.js                   opens the dashboard when the toolbar icon is clicked
+```
+
+Reddit's composer is built from web components, so `content.js` searches through open
+shadow roots.
+
+## Safety
+
+- It never clicks the submit button unless it says **Schedule**, so a schedule that didn't apply can't turn into an immediate post
+- It stops on the first failed or unconfirmed row
+- Test mode is on by default
+
+## Limitations
+
+- Post flair isn't set. If the subreddit requires flair, the Schedule button stays disabled and the row fails
+- The body is pasted as plain text, so Markdown syntax isn't converted to formatting
+- Text posts only: no images, links or galleries
+- It depends on Reddit's current page structure. If Reddit changes it, use **Inspect submit page** and update the selectors in `content.js`
+- Use it in line with Reddit's rules and each subreddit's rules
+
+## Project structure
+
+```
+manifest.json     extension manifest (MV3)
+background.js     toolbar click → dashboard tab
+dashboard.html    dashboard UI
+dashboard.js      CSV parsing, runner, statuses
+content.js        Reddit form automation
+icons/            16/32/48/128 px icons
+sample.csv        2-row example
+sample-20.csv     20-row example
+```
