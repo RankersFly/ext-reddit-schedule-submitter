@@ -28,6 +28,33 @@ communities you moderate.
 
 After editing any file, click the reload icon on the extension card and refresh the dashboard tab.
 
+## Build
+
+You need Node.js 22 or newer. Run `npm install` once to get the dev tools (esbuild and
+javascript-obfuscator).
+
+| Command                         | What it does                                                              |
+|---------------------------------|---------------------------------------------------------------------------|
+| `npm run check`                 | Validates the manifest and referenced files, checks JS syntax and version sync |
+| `npm run build`                 | **Production.** Minifies JS, CSS and HTML into `dist/reddit-schedule-submitter/`, smoke-tests the output, and creates `dist/reddit-schedule-submitter-v<version>.zip`. Allowed on the Chrome Web Store |
+| `npm run build:protected`       | Production **plus obfuscation** of `content.js` and `background.js` (encoded strings, flattened control flow). Output gets a `-protected` suffix. **Not allowed on the Chrome Web Store**: use it for private installs only |
+| `npm run build:dev`             | Readable copy in `dist/reddit-schedule-submitter-dev/`, no zip            |
+| `npm run bump -- minor`         | Bumps the version (`patch` by default, or `minor` / `major`) in `manifest.json` and `package.json` |
+| `npm run release -- minor`      | Bumps the version, then builds                                            |
+| `npm run clean`                 | Deletes `dist/`                                                           |
+
+The package contains only what the extension needs at runtime: `manifest.json`, the JS
+and HTML files, and `icons/`. Sample CSVs, docs and build scripts are left out. You can
+upload the zip to the Chrome Web Store, or unzip it and load it with **Load unpacked**.
+
+During development you can still load the project folder itself unpacked; you don't need
+to build first.
+
+`dashboard.js` is always minified, never obfuscated. It passes functions to
+`chrome.scripting.executeScript`, which turns them into text and runs them inside the
+Reddit page. The obfuscator would make those functions call helpers that exist only in
+the dashboard, so they would fail on Reddit.
+
 ## CSV format
 
 | Column      | Required | Format                                       |
@@ -126,6 +153,8 @@ dashboard.html    dashboard UI
 dashboard.js      CSV parsing, runner, statuses
 content.js        Reddit form automation
 icons/            16/32/48/128 px icons
+scripts/build.mjs build, check, bump, clean (no dependencies)
+package.json      npm scripts and version
 sample.csv        2-row example
 sample-20.csv     20-row example
 ```

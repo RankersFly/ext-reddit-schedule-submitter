@@ -1,16 +1,10 @@
 title,body,date,time
-"Welcome to r/reddmentor_dev — start here","Hi everyone! This is a space for developers to ask questions, share progress and find mentors.
+Welcome to r/reddmentor_dev — start here,"Hi everyone! This is a space for developers to ask questions, share progress and find mentors.
+
+
 
 Introduce yourself in the comments: what are you building, and what do you want to learn next?",2026-10-22,10:00
-"Weekly Q&A: ask anything about web development","No question is too basic. Drop it below and someone will help.
-
-Tip: include what you've already tried and any error messages.",2026-10-22,18:00
-"What's your current tech stack and why?","Curious what everyone is using in 2026. Frontend, backend, database, hosting — share your setup and what you like (or hate) about it.",2026-10-23,10:00
-"Show your side project Saturday (early edition)","Working on something cool? Post a link or screenshot, a short description, and what feedback you're looking for.",2026-10-23,18:00
-"How do you stay focused while learning to code?","Pomodoro, music, coffee, accountability partners?
-
-Share the habits that actually work for you.",2026-10-24,10:00
-"Beginner roadmap: from zero to your first web app","1. HTML & CSS basics
+Beginner roadmap: from zero to your first web app,"1. HTML & CSS basics
 2. JavaScript fundamentals
 3. Git and GitHub
 4. One framework (React, Vue or Svelte)
@@ -18,23 +12,31 @@ Share the habits that actually work for you.",2026-10-24,10:00
 6. Deploy it!
 
 What would you add or change?",2026-10-24,18:00
-"Code review request thread","Paste a snippet (or a repo link) you'd like feedback on. Please keep reviews kind and specific.",2026-10-25,10:00
-"Git tips you wish you knew earlier","Mine: git switch -c for new branches, and git commit --fixup with rebase --autosquash.
+What's your current tech stack and why?,"Curious what everyone is using in 2026. Frontend, backend, database, hosting — share your setup and what you like (or hate) about it.",2026-10-23,10:00
+Show your side project Saturday (early edition),"Working on something cool? Post a link or screenshot, a short description, and what feedback you're looking for.",2026-10-23,18:00
+How do you stay focused while learning to code?,"Pomodoro, music, coffee, accountability partners?
+
+Share the habits that actually work for you.",2026-10-24,10:00
+Weekly Q&A: ask anything about web development,"No question is too basic. Drop it below and someone will help.
+
+Tip: include what you've already tried and any error messages.",2026-10-22,18:00
+Code review request thread,Paste a snippet (or a repo link) you'd like feedback on. Please keep reviews kind and specific.,2026-10-25,10:00
+Git tips you wish you knew earlier,"Mine: git switch -c for new branches, and git commit --fixup with rebase --autosquash.
 
 What's yours?",2026-10-25,18:00
-"Mentor spotlight: what got you into programming?","Mentors, tell us your story — first language, first job, biggest lesson learned along the way.",2026-10-26,10:00
-"Debugging stories: the bug that took you the longest","Everyone has one. What was it, how long did it take, and what was the fix?",2026-10-26,18:00
-"Resources thread: best free courses and docs","Share the free learning resources that helped you most. Bonus points for a one-line summary of why it's good.",2026-10-27,10:00
-"How do you write a good README?","What sections do you always include? Screenshots, setup steps, a demo GIF, a roadmap?",2026-10-27,18:00
-"Frontend vs backend: which did you pick and why?","And if you went full-stack, which side do you enjoy more?",2026-10-28,10:00
-"Interview prep: questions you were actually asked","Share real interview questions (no company secrets) and how you answered them.",2026-10-28,18:00
-"Testing: what's your minimum before you ship?","Unit tests, integration tests, manual QA, or just vibes?
+Mentor spotlight: what got you into programming?,"Mentors, tell us your story — first language, first job, biggest lesson learned along the way.",2026-10-26,10:00
+Debugging stories: the bug that took you the longest,"Everyone has one. What was it, how long did it take, and what was the fix?",2026-10-26,18:00
+Resources thread: best free courses and docs,Share the free learning resources that helped you most. Bonus points for a one-line summary of why it's good.,2026-10-27,10:00
+How do you write a good README?,"What sections do you always include? Screenshots, setup steps, a demo GIF, a roadmap?",2026-10-27,18:00
+Frontend vs backend: which did you pick and why?,"And if you went full-stack, which side do you enjoy more?",2026-10-28,10:00
+Interview prep: questions you were actually asked,Share real interview questions (no company secrets) and how you answered them.,2026-10-28,18:00
+Testing: what's your minimum before you ship?,"Unit tests, integration tests, manual QA, or just vibes?
 
 Be honest!",2026-10-29,10:00
-"Freelancing tips for new developers","How did you find your first client? How do you price your work? What would you do differently?",2026-10-29,18:00
-"Accessibility basics every developer should know","Semantic HTML, alt text, keyboard navigation, colour contrast.
+Freelancing tips for new developers,How did you find your first client? How do you price your work? What would you do differently?,2026-10-29,18:00
+Accessibility basics every developer should know,"Semantic HTML, alt text, keyboard navigation, colour contrast.
 
 What's one accessibility fix you've made recently?",2026-10-30,10:00
-"Weekend build challenge: a tiny tool in under 4 hours","Pick a small annoyance in your day and build something to fix it. Post your results here on Sunday!",2026-10-30,18:00
-"Monthly wins: what did you ship in October?","Big or small, celebrate it here. Finished a course? Fixed a nasty bug? Landed a job? Tell us!",2026-10-31,10:00
-"Feedback: how can we make this community better?","What topics, events or threads would you like to see next month? All suggestions welcome.",2026-10-31,18:00
+Weekend build challenge: a tiny tool in under 4 hours,Pick a small annoyance in your day and build something to fix it. Post your results here on Sunday!,2026-10-30,18:00
+Monthly wins: what did you ship in October?,"Big or small, celebrate it here. Finished a course? Fixed a nasty bug? Landed a job? Tell us!",2026-10-31,10:00
+Feedback: how can we make this community better?,"What topics, events or threads would you like to see next month? All suggestions welcome.",2026-10-31,18:00

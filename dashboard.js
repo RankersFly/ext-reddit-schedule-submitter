@@ -1,5 +1,17 @@
 // Drives a separate Reddit window: for each CSV row it opens the submit page,
 // injects content.js, fills + schedules the post, then confirms it went through.
+// While waiting between posts, scroll the Reddit page (e.g. /mod/<sub>/scheduledposts)
+// up and down at random. Ranges are [min, max]; pixels or milliseconds.
+const IDLE_SCROLL = {
+  enabled: true,
+  startDelay: [1500, 3000],    // wait for the page to settle first
+  scrollBy: [150, 650],        // pixels per scroll
+  upChance: 0.3,               // chance a scroll goes up instead of down
+  pause: [800, 3000],          // between scrolls
+  readChance: 0.15,            // chance of a longer "reading" pause
+  readPause: [3000, 7000],
+};
+
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -241,6 +253,64 @@ async function confirmSubmitted(tabId) {
   return { ok: null, note: "no confirmation within 40s — check Reddit's scheduled posts" };
 }
 
+// Starts a self-running scroll loop in the Reddit tab that ends at `untilMs`
+// (or when stopIdleScroll sets the deadline to 0, or the page navigates away).
+async function startIdleScroll(tabId, untilMs) {
+  if (!IDLE_SCROLL.enabled || tabId === null) return;
+  try {
+    // The scheduled-posts page may still be loading right after submit.
+    if ((await chrome.tabs.get(tabId)).status !== "complete") await waitForLoad(tabId, 15000).catch(() => {});
+    await exec(tabId, (until, cfg) => {
+      window.__idleScrollUntil = until;
+      if (window.__idleScrollRunning) return;
+      window.__idleScrollRunning = true;
+
+      const rand = ([a, b]) => a + Math.random() * (b - a);
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const active = () => Date.now() < window.__idleScrollUntil;
+
+      // Window scroll if the document scrolls, otherwise the biggest scrollable container.
+      const target = () => {
+        const doc = document.scrollingElement;
+        if (doc.scrollHeight > innerHeight + 50) return doc;
+        let best = doc;
+        for (const el of document.querySelectorAll("*")) {
+          const s = getComputedStyle(el).overflowY;
+          if ((s === "auto" || s === "scroll") && el.scrollHeight - el.clientHeight > best.scrollHeight - best.clientHeight) best = el;
+        }
+        return best;
+      };
+
+      (async () => {
+        try {
+          await sleep(rand(cfg.startDelay));
+          while (active()) {
+            const el = target();
+            const max = el.scrollHeight - el.clientHeight;
+            let dir = Math.random() < cfg.upChance ? -1 : 1;
+            if (el.scrollTop <= 5) dir = 1;
+            else if (el.scrollTop >= max - 5) dir = -1;
+            el.scrollBy({ top: dir * rand(cfg.scrollBy), behavior: "smooth" });
+            await sleep(Math.random() < cfg.readChance ? rand(cfg.readPause) : rand(cfg.pause));
+          }
+        } finally {
+          window.__idleScrollRunning = false;
+        }
+      })();
+    }, [untilMs, IDLE_SCROLL]);
+    log("  Scrolling the Reddit page until the next post…");
+  } catch {
+    // Tab closed or not scriptable; scrolling is cosmetic, so ignore.
+  }
+}
+
+async function stopIdleScroll(tabId) {
+  if (tabId === null) return;
+  try {
+    await exec(tabId, () => { window.__idleScrollUntil = 0; });
+  } catch {}
+}
+
 // ---------- runner ----------
 
 async function runRow(r, testMode) {
@@ -288,7 +358,9 @@ async function start() {
       const next = rows.find((x) => !x.problem && statuses[x.key]?.status !== "done" && x !== r);
       if (!next) break;
       const until = Date.now() + delay;
+      await startIdleScroll(redditTabId, until);
       while (Date.now() < until && !stopRequested) await sleep(500);
+      await stopIdleScroll(redditTabId);
     }
   } finally {
     setRunning(false);

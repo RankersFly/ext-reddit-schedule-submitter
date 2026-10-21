@@ -1,0 +1,23 @@
+{
+  "name": "reddit-schedule-submitter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chrome extension that schedules Reddit posts from a CSV using Reddit's own post scheduler.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node scripts/build.mjs check",
+    "build": "node scripts/build.mjs build",
+    "build:dev": "node scripts/build.mjs build --dev",
+    "build:protected": "node scripts/build.mjs build --protected",
+    "clean": "node scripts/build.mjs clean",
+    "bump": "node scripts/build.mjs bump",
+    "release": "node scripts/build.mjs bump && node scripts/build.mjs build"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10",
+    "javascript-obfuscator": "^4.1.1"
+  }
+}
