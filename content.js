@@ -185,6 +185,7 @@
   function pauseAfter(ch) {
     let ms = rand(HUMAN.keyDelay);
     if (ch === " ") ms += rand(HUMAN.spacePause);
+    if (ch === "\n") ms += rand(HUMAN.lineBreakPause);
     if (/[.,!?;:]/.test(ch)) ms += rand(HUMAN.punctuationPause);
     if (Math.random() < HUMAN.thinkChance) ms += rand(HUMAN.thinkPause);
     return sleep(ms);
@@ -221,7 +222,8 @@
   // Types text like a person. Returns false if the field got out of sync (stray
   // characters or a missing line break); the caller then falls back to a clean fill.
   async function typeHuman(el, text) {
-    const tokens = tokenize(text);
+    // A textarea takes "\n" as a normal character; only the rich editor needs Enter events.
+    const tokens = isTextControl(el) ? [...text.replace(/\r/g, "")] : tokenize(text);
     for (let i = 0; i < tokens.length; i++) {
       const t = tokens[i];
       ensureFocus(el);
@@ -234,7 +236,7 @@
 
       // No typos on the first character of a line: the editor's cursor can still be
       // settling right after Enter, which is where stray letters used to come from.
-      const afterBreak = i === 0 || typeof tokens[i - 1] !== "string";
+      const afterBreak = i === 0 || typeof tokens[i - 1] !== "string" || tokens[i - 1] === "\n";
       if (!afterBreak && /[a-z]/i.test(t) && Math.random() < HUMAN.typoChance) {
         if (!(await makeTypo(el, tokens, i))) return false;
       }
@@ -243,18 +245,6 @@
       await pauseAfter(t);
     }
     return true;
-  }
-
-  // Same token handling without delays or typos, for the fallback path.
-  async function typeFast(el, text) {
-    let chunk = "";
-    for (const t of tokenize(text)) {
-      if (typeof t === "string") { chunk += t; continue; }
-      if (chunk) document.execCommand("insertText", false, chunk);
-      chunk = "";
-      await pressEnter(el, t === LINE_BREAK);
-    }
-    if (chunk) document.execCommand("insertText", false, chunk);
   }
 
   // ---------- title ----------
@@ -286,67 +276,56 @@
 
   // ---------- body ----------
 
+  // Written in Reddit's Markdown mode, then switched back to the rich text editor,
+  // which renders **bold**, *italic* and lists.
   async function fillBody(body) {
-    // Keep line breaks exactly as in the CSV; only trim leading/trailing blank lines.
+    // Keep line breaks as in the CSV; only trim leading/trailing blank lines.
     body = (body || "").replace(/\r/g, "").replace(/^\n+|\n+$/g, "");
     if (!body.trim()) return "";
-    const editor = await waitFor(
-      () =>
-        document.querySelector('shreddit-composer[name="body"] [contenteditable="true"]') ||
-        deepOne(document, '[data-lexical-editor="true"][name="body"]')
+    const composer = () => document.querySelector("#post-composer_bodytext")?.shadowRoot;
+
+    const toMarkdown = await waitFor(() =>
+      document
+        .querySelector("#post-composer-toolbar-portal rte-toolbar")
+        ?.shadowRoot?.querySelector('rpl-menu-item[aria-label="Switch to Markdown"]')
     );
-    if (!editor) throw new Error("Body editor not found");
+    if (!toMarkdown) throw new Error('"Switch to Markdown" not found');
+    toMarkdown.click();
 
-    // Line-by-line signature: same text on the same lines, ignoring spacing, blank
-    // lines and list markers (Lexical may turn "1. " / "- " lines into real lists).
-    const sig = (s) =>
-      (s || "")
-        .split("\n")
-        .map((l) => l.replace(/^\s*(\d+\.|[-*])\s+/, "").replace(/[\s ​]+/g, " ").trim())
-        .filter(Boolean)
-        .join("\n");
-    const matches = () => sig(editor.innerText) === sig(body);
-    const isEmpty = () => sig(editor.innerText) === "";
+    const textarea = await waitFor(() => {
+      const el = composer()
+        ?.querySelector("shreddit-markdown-composer")
+        ?.shadowRoot?.querySelector('textarea[part="textarea-input"]');
+      return el && isVisible(el) ? el : null;
+    });
+    if (!textarea) throw new Error("Markdown text box not found");
+    textarea.focus();
+    if (textarea.value) setNativeValue(textarea, "");
 
-    // Clears the editor and confirms it's really empty, so a refill can never duplicate text.
-    const clear = async () => {
-      for (let attempt = 0; attempt < 3 && !isEmpty(); attempt++) {
-        editor.focus();
-        document.execCommand("selectAll");
-        document.execCommand("delete");
-        await sleep(200);
-      }
-      if (!isEmpty()) throw new Error("Couldn't clear the body editor; stopping to avoid duplicate text");
-    };
-
-    await clear();
-    if (HUMAN.enabled && body.length <= HUMAN.maxTypedBodyChars) {
-      const ok = await typeHuman(editor, body);
-      await sleep(300);
-      if (ok && matches()) return "typed";
-      // Stray characters or a lost line break: redo it cleanly.
-      await clear();
-      editor.focus();
-      await typeFast(editor, body);
-      await sleep(300);
-      if (matches()) return "typed (re-filled cleanly after a typing glitch)";
-      await clear();
-    } else {
-      editor.focus();
-      await typeFast(editor, body);
-      await sleep(300);
-      if (matches()) return "filled";
-      await clear();
+    // Markdown joins single line breaks, so mark them as hard breaks (two trailing spaces).
+    const markdown = body.replace(/([^\n])\n(?!\n)/g, "$1  \n");
+    let how = "filled";
+    if (HUMAN.enabled && markdown.length <= HUMAN.maxTypedBodyChars) {
+      const ok = await typeHuman(textarea, markdown);
+      how = ok && textarea.value === markdown ? "typed" : "typed (re-filled cleanly after a typing glitch)";
     }
+    if (textarea.value !== markdown) setNativeValue(textarea, markdown);
+    await sleep(300);
+    await humanPause(HUMAN.stepPause);
 
-    // Last resort: plain-text paste (Lexical keeps the line breaks).
-    const dt = new DataTransfer();
-    dt.setData("text/plain", body);
-    editor.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true, composed: true }));
-    await sleep(400);
-    if (matches()) return "pasted";
-    if (norm(editor.innerText).includes(norm(body).slice(0, 40))) return "pasted (line breaks may differ)";
-    throw new Error("Body text did not stick in the editor");
+    const toRichText = await waitFor(() => {
+      const el = composer()?.querySelector('button[aria-label="Switch to Rich Text Editor"]');
+      return el && isVisible(el) ? el : null;
+    });
+    if (!toRichText) throw new Error('"Switch to Rich Text Editor" not found');
+    toRichText.click();
+
+    const landed = await waitFor(() => {
+      const el = document.querySelector('#post-composer_bodytext div[slot="rte"][contenteditable="true"]');
+      return el && isVisible(el) && el.innerText.trim();
+    });
+    if (!landed) throw new Error("Body text did not stick in the editor");
+    return `${how} via Markdown mode`;
   }
 
   // ---------- schedule ----------

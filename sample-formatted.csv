@@ -1,0 +1,30 @@
+title,body,date,time
+"Format test 1 - bold italic both","**This line is bold** and this is normal.
+
+This has *italic text* in the middle.
+
+This has ***bold and italic*** together.",2026-12-20,09:30
+"Format test 2 - bullets","Here is a bullet list:
+
+- First bullet
+- **Second bullet is bold**
+- Third bullet is *italic*",2026-12-20,10:30
+"Format test 3 - numbered list","Steps to follow:
+
+1. Open the page
+2. **Click** the button
+3. Check the *result*",2026-12-20,11:30
+"Format test 4 - everything mixed","**Weekly update**
+
+Some normal text, with a comma and *one italic word*.
+
+- Bullet with **bold**
+- Bullet with *italic*
+
+1. Number one
+2. Number two
+
+Last line is plain.",2026-12-20,13:30
+"Format test 5 - plain text only","This row has no formatting at all.
+
+2 * 3 * 4 and snake_case_name must stay exactly like this.",2026-12-20,14:30

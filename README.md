@@ -60,7 +60,7 @@ the dashboard, so they would fail on Reddit.
 | Column      | Required | Format                                       |
 |-------------|----------|----------------------------------------------|
 | `title`     | yes      | Up to 300 characters                         |
-| `body`      | no       | Plain text; blank lines become paragraphs    |
+| `body`      | no       | Text or Markdown; blank lines make paragraphs |
 | `date`      | yes      | `YYYY-MM-DD` or `MM/DD/YYYY`                 |
 | `time`      | yes      | `HH:mm` (24h) or `h:mm AM/PM`                |
 | `subreddit` | no       | Overrides the dashboard's subreddit per row  |
@@ -79,7 +79,7 @@ Second paragraph, with a comma.",2026-10-25,09:30
 Weekly thread #1,Drop your questions below.,10/26/2026,2:00 PM
 ```
 
-Two sample files are included: `sample.csv` (2 rows) and `sample-20.csv` (20 rows).
+Sample files: `sample.csv` (2 rows), `sample-20.csv` (20 rows) and `sample-formatted.csv` (5 rows covering bold, italic and lists).
 
 ## Usage
 
@@ -118,7 +118,7 @@ dashboard.html / dashboard.js   UI, CSV parsing, queue runner, status storage
         ▼
 content.js                      runs on reddit.com/r/<sub>/submit
    1. title  → post-composer-title (shadow DOM textarea)
-   2. body   → shreddit-composer Lexical editor (simulated paste)
+   2. body   → shreddit-composer Lexical editor (typed in Markdown mode, then switched back)
    3. clock  → #date-picker-button > shadow > button
    4. modal  → shreddit-date-input[name=publish-at-date]   (YYYY-MM-DD)
               shreddit-time-input[name=publish-at-time]    (HH:mm)
@@ -139,7 +139,7 @@ shadow roots.
 ## Limitations
 
 - Post flair isn't set. If the subreddit requires flair, the Schedule button stays disabled and the row fails
-- The body is pasted as plain text, so Markdown syntax isn't converted to formatting
+- Use Markdown for body formatting (`**bold**`, `*italic*`, `- ` bullets, `1. ` lists). A CSV can't store Excel or Google Sheets cell formatting
 - Text posts only: no images, links or galleries
 - It depends on Reddit's current page structure. If Reddit changes it, use **Inspect submit page** and update the selectors in `content.js`
 - Use it in line with Reddit's rules and each subreddit's rules
