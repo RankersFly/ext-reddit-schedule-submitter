@@ -282,7 +282,10 @@
     // Keep line breaks as in the CSV; only trim leading/trailing blank lines.
     body = (body || "").replace(/\r/g, "").replace(/^\n+|\n+$/g, "");
     if (!body.trim()) return "";
-    const composer = () => document.querySelector("#post-composer_bodytext")?.shadowRoot;
+    // Body editor host: shreddit-composer[name="body"] (older builds: #post-composer_bodytext).
+    const bodyHost = () =>
+      document.querySelector('shreddit-composer[name="body"], #post-composer_bodytext');
+    const composer = () => bodyHost()?.shadowRoot;
 
     const toMarkdown = await waitFor(() =>
       document
@@ -292,10 +295,16 @@
     if (!toMarkdown) throw new Error('"Switch to Markdown" not found');
     toMarkdown.click();
 
+    // shreddit-composer > #shadow-root > shreddit-markdown-composer > #shadow-root > textarea.
+    // Only ever look inside the body editor, never the whole page (the header search is a textarea too).
     const textarea = await waitFor(() => {
-      const el = composer()
-        ?.querySelector("shreddit-markdown-composer")
-        ?.shadowRoot?.querySelector('textarea[part="textarea-input"]');
+      const host = bodyHost();
+      if (!host) return null;
+      const el =
+        composer()
+          ?.querySelector("shreddit-markdown-composer")
+          ?.shadowRoot?.querySelector('textarea[part="textarea-input"]') ||
+        deepOne(host, "shreddit-markdown-composer textarea, textarea");
       return el && isVisible(el) ? el : null;
     });
     if (!textarea) throw new Error("Markdown text box not found");
@@ -314,14 +323,15 @@
     await humanPause(HUMAN.stepPause);
 
     const toRichText = await waitFor(() => {
-      const el = composer()?.querySelector('button[aria-label="Switch to Rich Text Editor"]');
+      const host = bodyHost();
+      const el = host && deepOne(host, 'button[aria-label="Switch to Rich Text Editor"]');
       return el && isVisible(el) ? el : null;
     });
     if (!toRichText) throw new Error('"Switch to Rich Text Editor" not found');
     toRichText.click();
 
     const landed = await waitFor(() => {
-      const el = document.querySelector('#post-composer_bodytext div[slot="rte"][contenteditable="true"]');
+      const el = bodyHost()?.querySelector('div[slot="rte"][contenteditable="true"]');
       return el && isVisible(el) && el.innerText.trim();
     });
     if (!landed) throw new Error("Body text did not stick in the editor");
